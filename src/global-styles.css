@@ -1,0 +1,45 @@
+*,
+button,
+input {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Roboto", sans-serif;
+}
+
+html,
+#root,
+body {
+  min-width: 100%;
+  min-height: 100vh;
+}
+
+.ipt {
+  user-select: none;
+  width: 100%;
+  min-width: 200px;
+  padding: 12px 8px;
+  border-radius: 4px;
+  font-weight: 400;
+}
+
+.bt {
+  width: 100%;
+  border-radius: 4px;
+  font-weight: bolder;
+  padding: 12px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+* ::-webkit-scrollbar {
+  background-color: #f0f0f0;
+  width: 8px;
+  height: 8px;
+}
+
+* ::-webkit-scrollbar-thumb {
+  /* border-radius: 8px; */
+  background: #929292;
+  border-radius: 8px;
+}
