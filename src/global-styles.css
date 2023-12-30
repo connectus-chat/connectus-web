@@ -1,0 +1,84 @@
+*,
+button,
+input {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Roboto", sans-serif;
+}
+
+html,
+#root,
+body {
+  min-width: 100%;
+  min-height: 100vh;
+  background-color: #e1e1e1;
+}
+
+a {
+  font-weight: bold;
+  color: #00920f;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+a:hover {
+  color: #005b09;
+}
+
+ul {
+  list-style: none;
+}
+
+.ipt {
+  user-select: none;
+  outline: none;
+  width: 100%;
+  background-color: transparent;
+  min-width: 200px;
+  padding: 12px 8px;
+  border-radius: 4px;
+  font-weight: 400;
+  border: 1px solid #00920f;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  transition: background-color 0s 600000s, color 0s 600000s;
+}
+
+.bt {
+  width: 100%;
+  border-radius: 4px;
+  font-weight: bolder;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  border: 0;
+  border: 1px solid #00920f;
+}
+
+.bt.primary,
+.bt.secondary:hover {
+  background-color: #00920f;
+  color: white;
+}
+
+.bt.primary:hover,
+.bt.secondary {
+  background-color: transparent;
+  color: #00920f;
+}
+
+* ::-webkit-scrollbar {
+  background-color: #f0f0f0;
+  width: 8px;
+  height: 8px;
+}
+
+* ::-webkit-scrollbar-thumb {
+  /* border-radius: 8px; */
+  background: #929292;
+  border-radius: 8px;
+}

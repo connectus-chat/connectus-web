@@ -1,3 +1,57 @@
+import { FormEvent } from "react";
+import { Header } from "../../components/Header";
+
+import { useNavigate } from "react-router-dom";
+import LogoImg from "../../assets/badget.svg";
+import { getFormData } from "../../components/Forms/get_form_data";
+import "./styles.css";
+
 export const LoginPage: React.FC = () => {
-  return <div className="loginpage">loginpage</div>;
+  const navigate = useNavigate();
+
+  function onSubmit(formEvent: FormEvent<HTMLFormElement>) {
+    formEvent.preventDefault();
+    const data = getFormData(formEvent.currentTarget);
+    const { username, password } = data;
+
+    navigate("/home");
+  }
+
+  return (
+    <div className="login-page">
+      <Header />
+      <form className="form" onSubmit={onSubmit}>
+        <img className="logo" src={LogoImg} alt="connectus.chat" />
+        <h1 className="title">Login</h1>
+        <div className="content">
+          <input
+            type="text"
+            name="username"
+            className="ipt"
+            placeholder="Digite seu nome de usuário"
+            required
+          />
+
+          <input
+            type="password"
+            name="password"
+            className="ipt"
+            placeholder="Digite sua senha"
+            required
+          />
+
+          <button className="bt primary submit" type="submit">
+            Entrar
+          </button>
+        </div>
+
+        <p className="info">
+          Ainda não possui conta?
+          <a onClick={() => navigate("signup")}>
+            Clique aqui para criar sua conta.
+          </a>
+        </p>
+      </form>
+    </div>
+  );
 };
