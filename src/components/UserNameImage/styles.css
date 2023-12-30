@@ -1,0 +1,17 @@
+.username-container {
+  --size-username-img: 50px;
+  width: var(--size-username-img);
+  height: var(--size-username-img);
+  background-color: #00920f;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid white;
+}
+
+.username-container .username-label {
+  font-weight: bolder;
+  font-size: 16pt;
+  color: white;
+}

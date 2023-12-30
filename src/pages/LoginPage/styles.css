@@ -1,0 +1,33 @@
+.login-page {
+  width: 100vw;
+  height: 100vh;
+}
+
+.login-page .form {
+  width: 50vw;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  margin: 0 auto;
+  gap: 12px;
+}
+
+.login-page .form .logo {
+  width: 400px;
+  height: auto;
+}
+
+.login-page .form .content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-page .info {
+  margin-top: 16px;
+}
+
+.login-page .info a {
+  margin-left: 4px;
+}
