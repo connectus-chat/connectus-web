@@ -6,13 +6,16 @@ import LogoImg from "../../assets/badget.svg";
 import { getFormData } from "../../components/Forms/get_form_data";
 import { User2Create } from "../../entities/user";
 import { useNotification } from "../../hooks/useNotification";
+import { UserService } from "../../services/user_service";
 import "./styles.css";
+
+const userService = new UserService();
 
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
   const { pushNotification } = useNotification();
 
-  function onSubmit(formEvent: FormEvent<HTMLFormElement>) {
+  async function onSubmit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
     const data = getFormData(formEvent.currentTarget);
     const { name, username, email, date, password, confirmPassword } = data;
@@ -35,7 +38,21 @@ export const SignupPage: React.FC = () => {
       username,
     };
 
-    console.log(newUser);
+    const createdUser = await userService.create(newUser);
+
+    if (!createdUser) {
+      pushNotification({
+        message: "Não foi possível criar um novo usuário.",
+        type: "error",
+      });
+      return;
+    }
+
+    pushNotification({
+      message: "Usuário criado com sucesso.",
+      type: "success",
+    });
+    navigate("/");
   }
 
   return (

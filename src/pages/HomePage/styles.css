@@ -45,8 +45,19 @@
   min-height: 50%;
 }
 
+.home-page .main .profile-container .chats .default {
+  display: none;
+}
+
+.home-page .main .profile-container .chats:not(:has(.chat)) .default {
+  display: inherit;
+  color: #000000aa;
+  font-style: italic;
+}
+
 .home-page .main .profile-container .chats .chat {
   border-radius: 4px;
+  cursor: pointer;
 }
 
 .home-page .main .profile-container .chats .chat:hover {

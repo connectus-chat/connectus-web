@@ -4,16 +4,29 @@ import { Header } from "../../components/Header";
 import { useNavigate } from "react-router-dom";
 import LogoImg from "../../assets/badget.svg";
 import { getFormData } from "../../components/Forms/get_form_data";
+import { useNotification } from "../../hooks/useNotification";
+import { UserService } from "../../services/user_service";
 import "./styles.css";
 
+const userService = new UserService();
+
 export const LoginPage: React.FC = () => {
+  const { pushNotification, clearAllNotifications } = useNotification();
   const navigate = useNavigate();
 
-  function onSubmit(formEvent: FormEvent<HTMLFormElement>) {
+  async function onSubmit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
     const data = getFormData(formEvent.currentTarget);
     const { username, password } = data;
-
+    const auth = await userService.login(username, password);
+    if (!auth) {
+      pushNotification({
+        message: "Usuário e/ou senha inválidos.",
+        type: "error",
+      });
+      return;
+    }
+    clearAllNotifications();
     navigate("/home");
   }
 
