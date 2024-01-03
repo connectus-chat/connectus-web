@@ -5,11 +5,11 @@ const PATH = "/users";
 export const LOCAL_AUTH = "authid";
 export class UserService {
   logout() {
-    localStorage.removeItem(LOCAL_AUTH);
+    sessionStorage.removeItem(LOCAL_AUTH);
   }
 
   hasAuth() {
-    const authid = localStorage.getItem(LOCAL_AUTH);
+    const authid = sessionStorage.getItem(LOCAL_AUTH);
     return !!authid;
   }
 
@@ -19,7 +19,7 @@ export class UserService {
         username,
         password,
       });
-      localStorage.setItem(LOCAL_AUTH, data.id);
+      sessionStorage.setItem(LOCAL_AUTH, data.id);
       return data;
     } catch (error) {
       return undefined;
@@ -42,7 +42,7 @@ export class UserService {
 
   async getAuthenticatedUser() {
     try {
-      const id = localStorage.getItem(LOCAL_AUTH);
+      const id = sessionStorage.getItem(LOCAL_AUTH);
       if (!id) throw new Error("Usuário sem as credenciais necessárias");
       const { data } = await api.get<User>(`${PATH}/${id}`);
       return data;
@@ -62,7 +62,7 @@ export class UserService {
 
   async follow(user2Follow: string) {
     try {
-      const id = localStorage.getItem(LOCAL_AUTH);
+      const id = sessionStorage.getItem(LOCAL_AUTH);
       if (!id) throw new Error("Usuário sem as credenciais necessárias");
       const { data } = await api.post<User>(
         `/users/${id}/follow/${user2Follow}`

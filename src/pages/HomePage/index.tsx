@@ -3,27 +3,40 @@ import { MessageCard } from "../../components/MessageCard";
 import { UserProfile } from "../../components/UserProfile";
 import { User } from "../../entities/user";
 
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loading } from "../../components/Loading";
 import { Message } from "../../entities/message";
 import { useNotification } from "../../hooks/useNotification";
+import { ChatWebsocket } from "../../services/chat_websocket";
 import { MessageService } from "../../services/message_service";
 import { UserService } from "../../services/user_service";
 import "./styles.css";
 
 const userService = new UserService();
 const messageService = new MessageService();
+const chatWebsocket = new ChatWebsocket();
+
+type EssentialMessage = Pick<Message, "content" | "fromUserId" | "time">;
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { pushNotification } = useNotification();
+  const inputRef = useRef<HTMLInputElement>(null);
+
   // Authenticated User
   const [user, setUser] = useState<User | undefined>();
 
   // User selected to chat
   const [selectedUser, setSelectedUser] = useState<User | undefined>();
   const [messages, setMessages] = useState<Message[] | undefined>();
+  const [currentMessages, setCurrentMessages] = useState<EssentialMessage[]>(
+    []
+  );
+
+  // Current reference of current messages
+  const messageRef = useRef<EssentialMessage[]>();
+  messageRef.current = currentMessages;
 
   // Search for friends
   const [isSearching, setIsSearching] = useState(false);
@@ -74,12 +87,51 @@ export const HomePage: React.FC = () => {
   }
 
   async function handleOpenChat(friend: User) {
+    if (!user) return;
+
     async function fetch() {
       const messages = await messageService.fetchAll(friend.id);
       setMessages(messages);
     }
     fetch();
-    setSelectedUser(friend);
+
+    chatWebsocket
+      .join(user.id, friend.id, (m) => {
+        pushMessage(m, friend.id);
+      })
+      .then(() => {
+        setSelectedUser(friend);
+      });
+  }
+
+  async function handleSend() {
+    if (
+      !inputRef ||
+      !inputRef.current ||
+      !user ||
+      !selectedUser ||
+      messages === undefined
+    )
+      return;
+
+    const { value } = inputRef.current;
+    if (value !== "") {
+      await chatWebsocket.send(user.id, selectedUser.id, value);
+      pushMessage(value, user.id);
+    }
+    inputRef.current.value = "";
+  }
+
+  function pushMessage(content: string, fromId: string) {
+    if (!messageRef.current) return;
+    setCurrentMessages([
+      ...messageRef.current,
+      {
+        content: content,
+        time: new Date(),
+        fromUserId: fromId,
+      },
+    ]);
   }
 
   function renderFriend(friend: User, index: number) {
@@ -98,9 +150,13 @@ export const HomePage: React.FC = () => {
     );
   }
 
-  function renderMessage(message: Message) {
+  function renderMessage(message: EssentialMessage, index: number) {
     return (
-      <MessageCard message={message} isMine={message.fromUserId === user?.id} />
+      <MessageCard
+        key={index}
+        message={message}
+        isMine={message.fromUserId === user?.id}
+      />
     );
   }
 
@@ -145,20 +201,33 @@ export const HomePage: React.FC = () => {
           <div className="chat-container">
             {selectedUser && (
               <>
-                <header className="chat-user">
-                  <UserProfile user={selectedUser} />
-                </header>
-                <ul className="messages">{messages?.map(renderMessage)}</ul>
-                <div className="actions">
-                  <input
-                    type="text"
-                    className="ipt"
-                    placeholder="Digitar mensagem"
-                  />
-                  <button className="send">
-                    <SendIcon size={28} />
-                  </button>
-                </div>
+                {messages ? (
+                  <>
+                    <header className="chat-user">
+                      <UserProfile user={selectedUser} />
+                    </header>
+                    <ul className="messages">
+                      {messages?.map(renderMessage)}
+                      {currentMessages?.map(renderMessage)}
+                    </ul>
+                    <div className="actions">
+                      <input
+                        type="text"
+                        className="ipt"
+                        placeholder="Digitar mensagem"
+                        ref={inputRef}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") handleSend();
+                        }}
+                      />
+                      <button className="send" onClick={handleSend}>
+                        <SendIcon size={28} />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <Loading />
+                )}
               </>
             )}
           </div>
