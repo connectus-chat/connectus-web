@@ -47,11 +47,11 @@ export class AsymmetricKeyService {
 
   async decrypt(privateKey: string, encryptedData: string) {
     const cryptKeyFromPrivateKey = await this.importPrivateKey(privateKey);
-    const decryptedDataWithPrivateKey = window.crypto.subtle.encrypt(
+    const decryptedDataWithPrivateKey = await window.crypto.subtle.encrypt(
       { name: "RSA-OAEP" },
       cryptKeyFromPrivateKey,
       new TextEncoder().encode(encryptedData)
     );
-    return decryptedDataWithPrivateKey;
+    return new TextDecoder().decode(decryptedDataWithPrivateKey);
   }
 }

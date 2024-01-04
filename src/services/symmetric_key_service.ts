@@ -14,7 +14,7 @@ export class SymmetricKeyService {
     const dataArray = this.str2ab(message);
     const keyArray = this.str2ab(key);
     const cipherText = twofish.encrypt(keyArray, dataArray);
-    const encryptedString = cipherText
+    const encryptedString: string = cipherText
       .map((x: number) => x.toString(16).padStart(2, "0"))
       .join("");
     return encryptedString;
@@ -25,10 +25,9 @@ export class SymmetricKeyService {
     const encryptedMessageArray = this.str2ab(encryptedMessage);
     const keyArray = this.str2ab(key);
     const data = twofish.decrypt(keyArray, encryptedMessageArray);
-    const decryptedString = data
+    const decryptedString: string = data
       .map((x: number) => String.fromCharCode(x))
       .join("");
-
     return decryptedString;
   }
 }
