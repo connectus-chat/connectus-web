@@ -27,7 +27,7 @@ export class ChatWebsocket {
   }
 
   private async getSessionKey(id: string, friendId: string): Promise<string> {
-    return new Promise((res) => {
+    return new Promise((res, rej) => {
       // wait for a session key
       this.socket?.on(
         "set-session-key",
@@ -40,6 +40,7 @@ export class ChatWebsocket {
           const privateKey = await this.asymmetricService.findPrivateKey(id);
 
           // decrypt session key using private key
+          if (!privateKey) return rej();
           this.sessionKey = await this.asymmetricService.decrypt(
             privateKey,
             data.encryptedSessionKey
