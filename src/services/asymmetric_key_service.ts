@@ -21,37 +21,40 @@ export class AsymmetricKeyService {
     return buf;
   }
 
-  private importPrivateKey(pem: string) {
+  private async importPrivateKey(pem: string) {
     const pemHeader = "-----BEGIN PRIVATE KEY-----";
     const pemFooter = "-----END PRIVATE KEY-----";
     const pemContents = pem.substring(
       pemHeader.length,
-      pem.length - pemFooter.length
+      pem.length - pemFooter.length - 1
     );
     // base64 -> binary data
     const binaryDerString = window.atob(pemContents);
     // binary string -> ArrayBuffer
     const binaryDer = this.str2ab(binaryDerString);
 
+    console.log("pre: ", binaryDer);
     return window.crypto.subtle.importKey(
       "pkcs8",
       binaryDer,
       {
-        name: "RSA-PSS",
+        name: "RSA-OAEP",
         hash: "SHA-256",
       },
-      true,
-      ["sign"]
+      false,
+      ["decrypt"]
     );
   }
 
   async decrypt(privateKey: string, encryptedData: string) {
-    const cryptKeyFromPrivateKey = await this.importPrivateKey(privateKey);
-    const decryptedDataWithPrivateKey = await window.crypto.subtle.encrypt(
+    const importedPrivateKey = await this.importPrivateKey(privateKey);
+    console.log("Chave privada importada: ", importedPrivateKey);
+    const decryptedData = await window.crypto.subtle.decrypt(
       { name: "RSA-OAEP" },
-      cryptKeyFromPrivateKey,
+      importedPrivateKey,
       new TextEncoder().encode(encryptedData)
     );
-    return new TextDecoder().decode(decryptedDataWithPrivateKey);
+    console.log("Chave de sessao: ", decryptedData);
+    return new TextDecoder().decode(decryptedData);
   }
 }
