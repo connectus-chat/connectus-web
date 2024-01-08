@@ -19,9 +19,10 @@ export class SymmetricKeyService {
 
   async encrypt(key: string, message: string) {
     const twofish = twf.twofish();
-    const dataArray = this.str2ab(message);
-    const keyArray = this.str2ab(key);
+    const dataArray = twofish.stringToByteArray(key);
+    const keyArray = twofish.stringToByteArray(message);
     const cipherText = twofish.encrypt(keyArray, dataArray);
+    console.log('cipher: ', cipherText);
     const encryptedString: string = cipherText
       .map((x: number) => x.toString(16).padStart(2, "0"))
       .join("");
