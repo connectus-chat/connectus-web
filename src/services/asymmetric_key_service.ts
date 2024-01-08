@@ -7,10 +7,22 @@ export class AsymmetricKeyService {
         `/users/${id}/auth/private`
       );
       return data.privateKey;
-    } catch (error) {
-      return undefined;
+    } catch (error: any) {
+      const msg = error.message | error;
+      throw new Error(`Error finding private key: ${msg}`);
     }
   }
+
+  private base64ToArrayBuffer(base64: string) { 
+    const binaryString = atob(base64); 
+    const length = binaryString.length; 
+    const arrayBuffer = new ArrayBuffer(length); 
+    const uint8Array = new Uint8Array(arrayBuffer); 
+    for (let i = 0; i < length; i++) { 
+        uint8Array[i] = binaryString.charCodeAt(i); 
+    } 
+    return arrayBuffer; 
+}
 
   private str2ab(str: string) {
     const buf = new ArrayBuffer(str.length);
@@ -21,37 +33,52 @@ export class AsymmetricKeyService {
     return buf;
   }
 
-  private importPrivateKey(pem: string) {
+  private async importPrivateKey(pem: string) {
     const pemHeader = "-----BEGIN PRIVATE KEY-----";
     const pemFooter = "-----END PRIVATE KEY-----";
     const pemContents = pem.substring(
       pemHeader.length,
-      pem.length - pemFooter.length
+      pem.length - pemFooter.length - 1
     );
     // base64 -> binary data
     const binaryDerString = window.atob(pemContents);
     // binary string -> ArrayBuffer
     const binaryDer = this.str2ab(binaryDerString);
 
-    return window.crypto.subtle.importKey(
+    console.log("pre: ", binaryDer);
+    const importedPrivateKey = await window.crypto.subtle.importKey(
       "pkcs8",
       binaryDer,
       {
-        name: "RSA-PSS",
-        hash: "SHA-256",
+          name: "RSA-OAEP",
+          hash: { name: "SHA-256" },
       },
-      true,
-      ["sign"]
+      false,
+      ["decrypt"]
     );
+    return importedPrivateKey;
   }
 
   async decrypt(privateKey: string, encryptedData: string) {
-    const cryptKeyFromPrivateKey = await this.importPrivateKey(privateKey);
-    const decryptedDataWithPrivateKey = await window.crypto.subtle.encrypt(
-      { name: "RSA-OAEP" },
-      cryptKeyFromPrivateKey,
-      new TextEncoder().encode(encryptedData)
+    try {
+      const importedPrivateKey = await this.importPrivateKey(privateKey);
+      console.log("Chave privada importada: ", importedPrivateKey);
+
+      // base64 -> binary data
+      const binaryDerString = window.atob(encryptedData);
+      // binary string -> ArrayBuffer
+      const encodedData = this.str2ab(binaryDerString);
+      
+      const decryptedData = await window.crypto.subtle.decrypt(
+        { name: "RSA-OAEP" },
+        importedPrivateKey,
+        encodedData
     );
-    return new TextDecoder().decode(decryptedDataWithPrivateKey);
+      console.log("Chave de sessao: ", decryptedData);
+      return new TextDecoder().decode(decryptedData);
+    } catch(error: any){
+      const msg = error;
+      throw new Error(`Error decrypting private key: ${msg}`);
+    }
   }
 }

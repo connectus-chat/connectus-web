@@ -26,32 +26,42 @@ export class ChatWebsocket {
     });
   }
 
-  private async getSessionKey(id: string, friendId: string): Promise<string> {
+  private async getSessionKey(
+    id: string,
+    friendId: string
+  ): Promise<string | null> {
     return new Promise((res, rej) => {
       // wait for a session key
       this.socket?.on(
         "set-session-key",
         async (data: { encryptedSessionKey: string }) => {
-          console.log(
-            "[WS] recebendo chave de sessão nova: ",
-            data.encryptedSessionKey
-          );
-          // get private key
-          const privateKey = await this.asymmetricService.findPrivateKey(id);
-
-          // decrypt session key using private key
-          if (!privateKey) return rej();
-          this.sessionKey = await this.asymmetricService.decrypt(
-            privateKey,
-            data.encryptedSessionKey
-          );
-          res(this.sessionKey);
+          try {
+            console.log(
+              `[WS] ${id} recebendo chave de sessão nova: "`,
+              data.encryptedSessionKey
+            );
+            // get private key
+            const privateKey = await this.asymmetricService.findPrivateKey(id);
+  
+            // decrypt session key using private key
+            if (!privateKey) throw new Error("Private key not found");
+            console.log("K-", privateKey);
+            this.sessionKey = await this.asymmetricService.decrypt(
+              privateKey,
+              data.encryptedSessionKey
+            );
+            console.log("Chave de sessão", this.sessionKey);
+            res(this.sessionKey);
+          } catch (error: any) {
+            console.error("[WS] Error getting session key:\n", error.message);
+            rej(error);
+          }
         }
       );
-      // notify server when an user joins in a chat
+      // notify the server when a user joins a chat
       this.socket?.emit("join", { id, friendId });
     });
-  }
+  }  
 
   async join(
     id: string,
@@ -69,13 +79,13 @@ export class ChatWebsocket {
 
   async send(id: string, friendId: string, message: string) {
     if (!this.isConnected()) return;
-
+    console.log('message: ', message);
     // encrypt message using session key
     const encryptedMessage = await this.symmetricService.encrypt(
       this.sessionKey as string,
       message
     );
-
+    console.log('encrypted message: ', encryptedMessage);
     // emit message to server
     console.log("[WS] enviando mensagem: ", encryptedMessage);
     this.socket?.emit("send-message", {
