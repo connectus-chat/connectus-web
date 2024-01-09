@@ -6,7 +6,7 @@ export class SymmetricKeyService {
     for (let i = 0, strLen = str.length; i < strLen; i++) {
       bufView[i] = str.charCodeAt(i);
     }
-    return buf;
+    return bufView;
   }
 
   private hexStringToByteArray(hexString: string) {
@@ -19,23 +19,21 @@ export class SymmetricKeyService {
 
   async encrypt(key: string, message: string) {
     const twofish = twf.twofish();
-    const dataArray = twofish.stringToByteArray(key);
-    const keyArray = twofish.stringToByteArray(message);
+    const dataArray = this.str2ab(message);
+    const keyArray = this.str2ab(key);
     const cipherText = twofish.encrypt(keyArray, dataArray);
-    console.log('cipher: ', cipherText);
-    const encryptedString: string = cipherText
-      .map((x: number) => x.toString(16).padStart(2, "0"))
-      .join("");
+    const encryptedString: string = btoa(JSON.stringify(cipherText));
     return encryptedString;
   }
 
   async decrypt(key: string, encryptedMessage: string) {
     const twofish = twf.twofish();
-    const encryptedMessageArray = this.hexStringToByteArray(encryptedMessage);
+    const encryptedMessageArray = new Uint8Array(
+      JSON.parse(atob(encryptedMessage))
+    );
     const keyArray = this.str2ab(key);
 
     const data = twofish.decrypt(keyArray, encryptedMessageArray);
-
     const decryptedHex = data
       .map((x: number) => x.toString(16).padStart(2, "0"))
       .join("");

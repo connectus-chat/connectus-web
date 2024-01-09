@@ -114,7 +114,6 @@ export const HomePage: React.FC = () => {
     )
       return;
     const { value } = inputRef.current;
-    console.log(messages);
     if (value !== "") {
       await chatWebsocket.send(user.id, selectedUser.id, value);
       pushMessage(value, user.id);
@@ -122,19 +121,8 @@ export const HomePage: React.FC = () => {
     inputRef.current.value = "";
   }
 
-  // function pushMessage(content: string, fromId: string) {
-  //   if (!messageRef.current) return;
-  //   setCurrentMessages([
-  //     ...messageRef.current,
-  //     {
-  //       content: content,
-  //       time: new Date(),
-  //       fromUserId: fromId,
-  //     },
-  //   ]);
-  // }
   function pushMessage(content: string, fromId: string) {
-    setCurrentMessages(prevMessages => [
+    setCurrentMessages((prevMessages) => [
       ...prevMessages,
       {
         content: content,
@@ -143,7 +131,6 @@ export const HomePage: React.FC = () => {
       },
     ]);
   }
-  
 
   function renderFriend(friend: User, index: number) {
     return (

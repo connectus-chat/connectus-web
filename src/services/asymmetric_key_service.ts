@@ -7,22 +7,11 @@ export class AsymmetricKeyService {
         `/users/${id}/auth/private`
       );
       return data.privateKey;
-    } catch (error: any) {
-      const msg = error.message | error;
+    } catch (error) {
+      const msg = error;
       throw new Error(`Error finding private key: ${msg}`);
     }
   }
-
-  private base64ToArrayBuffer(base64: string) { 
-    const binaryString = atob(base64); 
-    const length = binaryString.length; 
-    const arrayBuffer = new ArrayBuffer(length); 
-    const uint8Array = new Uint8Array(arrayBuffer); 
-    for (let i = 0; i < length; i++) { 
-        uint8Array[i] = binaryString.charCodeAt(i); 
-    } 
-    return arrayBuffer; 
-}
 
   private str2ab(str: string) {
     const buf = new ArrayBuffer(str.length);
@@ -45,13 +34,12 @@ export class AsymmetricKeyService {
     // binary string -> ArrayBuffer
     const binaryDer = this.str2ab(binaryDerString);
 
-    console.log("pre: ", binaryDer);
     const importedPrivateKey = await window.crypto.subtle.importKey(
       "pkcs8",
       binaryDer,
       {
-          name: "RSA-OAEP",
-          hash: { name: "SHA-256" },
+        name: "RSA-OAEP",
+        hash: { name: "SHA-256" },
       },
       false,
       ["decrypt"]
@@ -62,21 +50,19 @@ export class AsymmetricKeyService {
   async decrypt(privateKey: string, encryptedData: string) {
     try {
       const importedPrivateKey = await this.importPrivateKey(privateKey);
-      console.log("Chave privada importada: ", importedPrivateKey);
 
       // base64 -> binary data
       const binaryDerString = window.atob(encryptedData);
       // binary string -> ArrayBuffer
       const encodedData = this.str2ab(binaryDerString);
-      
+
       const decryptedData = await window.crypto.subtle.decrypt(
         { name: "RSA-OAEP" },
         importedPrivateKey,
         encodedData
-    );
-      console.log("Chave de sessao: ", decryptedData);
+      );
       return new TextDecoder().decode(decryptedData);
-    } catch(error: any){
+    } catch (error) {
       const msg = error;
       throw new Error(`Error decrypting private key: ${msg}`);
     }
