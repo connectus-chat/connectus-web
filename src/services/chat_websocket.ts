@@ -1,5 +1,6 @@
 import { Socket, io } from "socket.io-client";
 import { API_BASE_URL } from "../constants";
+import { Logger } from "./Logger";
 import { AsymmetricKeyService } from "./asymmetric_key_service";
 import { SymmetricKeyService } from "./symmetric_key_service";
 
@@ -38,13 +39,15 @@ export class ChatWebsocket {
           try {
             // get private key
             const privateKey = await this.asymmetricService.findPrivateKey(id);
-
+            Logger.websocketLog('Procurando chave privada', 'Chave privada recuperada', privateKey);
             // decrypt session key using private key
             if (!privateKey) throw new Error("Private key not found");
+            Logger.cryptoLog('Decriptografando chave twofish', 'Chave twofish criptografada', data.encryptedSessionKey);
             this.sessionKey = await this.asymmetricService.decrypt(
               privateKey,
               data.encryptedSessionKey
             );
+            Logger.cryptoLog('Decriptografando chave twofish', 'Chave twofish decriptografada', this.sessionKey);
             res(this.sessionKey);
           } catch (error) {
             console.error("[WS] Error getting session key:\n", error);
@@ -52,6 +55,7 @@ export class ChatWebsocket {
           }
         }
       );
+      Logger.websocketLog('Notificando servidor', 'Novo usuário iniciou chat', `userId: ${id}\nfriendId: ${friendId}`)
       // notify the server when a user joins a chat
       this.socket?.emit("join", { id, friendId });
     });
@@ -74,11 +78,14 @@ export class ChatWebsocket {
   async send(id: string, friendId: string, message: string) {
     if (!this.isConnected()) return;
     // encrypt message using session key
+    Logger.cryptoLog('Criptografando mensagem com chave Twofish', 'Criando mensagem criptografada', message);
     const encryptedMessage = await this.symmetricService.encrypt(
       this.sessionKey as string,
       message
     );
+    Logger.cryptoLog('Criptografando mensagem com chave Twofish', 'Mensagem encriptada', encryptedMessage);
     // emit message to server
+    Logger.websocketLog('Troca de mensagens', 'Enviando mensagem encriptada', `friendId: ${friendId}`)
     this.socket?.emit("send-message", {
       id,
       friendId,
@@ -97,10 +104,12 @@ export class ChatWebsocket {
     this.socket?.on(
       `receive-message`,
       async (data: { encryptedMessage: string }) => {
+        Logger.websocketLog('Troca de mensagens', 'Recebendo mensagem encriptada', data.encryptedMessage);
         const message = await this.symmetricService.decrypt(
           this.sessionKey as string,
           data.encryptedMessage
         );
+        Logger.cryptoLog('Criptografando mensagem com chave Twofish', 'Decriptando mensagem com chave twofish', message);
         onMessage(message);
       }
     );
