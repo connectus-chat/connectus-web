@@ -91,6 +91,12 @@ export class ChatWebsocket {
       friendId,
       encryptedMessage,
     });
+
+    this.socket?.emit("save-message", {
+      id,
+      friendId,
+      message,
+    });
   }
 
   private subscribe(onMessage: (message: string) => void) {
