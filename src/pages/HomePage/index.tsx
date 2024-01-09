@@ -135,7 +135,7 @@ export const HomePage: React.FC = () => {
   function renderFriend(friend: User, index: number) {
     return (
       <li key={index} className="chat" onClick={() => handleOpenChat(friend)}>
-        <UserProfile user={friend} />
+        <UserProfile selected={selectedUser?.id === friend.id} user={friend} />
       </li>
     );
   }
