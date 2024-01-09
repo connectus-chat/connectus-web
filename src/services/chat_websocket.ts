@@ -36,24 +36,18 @@ export class ChatWebsocket {
         "set-session-key",
         async (data: { encryptedSessionKey: string }) => {
           try {
-            console.log(
-              `[WS] ${id} recebendo chave de sessão nova: "`,
-              data.encryptedSessionKey
-            );
             // get private key
             const privateKey = await this.asymmetricService.findPrivateKey(id);
-  
+
             // decrypt session key using private key
             if (!privateKey) throw new Error("Private key not found");
-            console.log("K-", privateKey);
             this.sessionKey = await this.asymmetricService.decrypt(
               privateKey,
               data.encryptedSessionKey
             );
-            console.log("Chave de sessão", this.sessionKey);
             res(this.sessionKey);
-          } catch (error: any) {
-            console.error("[WS] Error getting session key:\n", error.message);
+          } catch (error) {
+            console.error("[WS] Error getting session key:\n", error);
             rej(error);
           }
         }
@@ -61,7 +55,7 @@ export class ChatWebsocket {
       // notify the server when a user joins a chat
       this.socket?.emit("join", { id, friendId });
     });
-  }  
+  }
 
   async join(
     id: string,
@@ -79,15 +73,12 @@ export class ChatWebsocket {
 
   async send(id: string, friendId: string, message: string) {
     if (!this.isConnected()) return;
-    console.log('message: ', message);
     // encrypt message using session key
     const encryptedMessage = await this.symmetricService.encrypt(
       this.sessionKey as string,
       message
     );
-    console.log('encrypted message: ', encryptedMessage);
     // emit message to server
-    console.log("[WS] enviando mensagem: ", encryptedMessage);
     this.socket?.emit("send-message", {
       id,
       friendId,
@@ -100,7 +91,6 @@ export class ChatWebsocket {
     this.socket?.on(
       `receive-message`,
       async (data: { encryptedMessage: string }) => {
-        console.log("[WS] recebendo mensagem: ", data.encryptedMessage);
         const message = await this.symmetricService.decrypt(
           this.sessionKey as string,
           data.encryptedMessage
