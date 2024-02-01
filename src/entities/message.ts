@@ -9,13 +9,17 @@ export interface Message {
   toUserId: string;
   fromUser: User;
   toUser: User;
+  publicCredentials: string;
 }
 
 export type Message2Create = Pick<Message, "content" | "time">;
 export type OptionalMessage = Message | undefined | null;
 
 export interface GroupMessage
-  extends Pick<Message, "content" | "time" | "fromUser" | "fromUserId" | "id"> {
+  extends Pick<
+    Message,
+    "content" | "time" | "fromUser" | "fromUserId" | "id" | "publicCredentials"
+  > {
   groupId: string;
   group?: Group;
 }

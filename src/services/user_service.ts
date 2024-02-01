@@ -5,9 +5,7 @@ import { AsymmetricKeyService } from "./asymmetric_key_service";
 const PATH = "/users";
 export const LOCAL_AUTH = "authid";
 export class UserService {
-
   private asymmetricService = new AsymmetricKeyService();
-  // private symmetricService = new SymmetricKeyService();
   logout() {
     sessionStorage.removeItem(LOCAL_AUTH);
   }
@@ -58,15 +56,13 @@ export class UserService {
   async create(newUser: User2Create) {
     try {
       const { data } = await api.post<User>(PATH, newUser);
-      
+
       const userKeyPair = await this.asymmetricService.generateRSAKeyPair();
-      await api.patch<User>(
-        `${PATH}/${data.id}/credentials`,
-        {
-          id: data.id,
-          publicKey: JSON.stringify(userKeyPair.publicKey)
-        });
-      sessionStorage.setItem(`${data.id}-privatekey`, userKeyPair.privateKey);
+      await api.patch<User>(`${PATH}/${data.id}/credentials`, {
+        id: data.id,
+        publicKey: JSON.stringify(userKeyPair.publicKey),
+      });
+      localStorage.setItem(`${data.id}-privatekey`, userKeyPair.privateKey);
       return data;
     } catch (error) {
       return undefined;

@@ -8,14 +8,16 @@ import { useNavigate } from "react-router-dom";
 import { Loading } from "../../components/Loading";
 import { Message } from "../../entities/message";
 import { useNotification } from "../../hooks/useNotification";
-import { ChatWebsocket } from "../../services/chat_websocket";
+import { AsymmetricKeyService } from "../../services/asymmetric_key_service";
+import { PrivateChat } from "../../services/chats/private_chat";
 import { MessageService } from "../../services/message_service";
+import { SymmetricKeyService } from "../../services/symmetric_key_service";
 import { UserService } from "../../services/user_service";
 import "./styles.css";
 
 const userService = new UserService();
 const messageService = new MessageService();
-const chatWebsocket = new ChatWebsocket();
+const chatWebsocket = new PrivateChat();
 
 type EssentialMessage = Pick<Message, "content" | "fromUserId" | "time">;
 
@@ -90,13 +92,37 @@ export const HomePage: React.FC = () => {
     if (!user) return;
 
     async function fetch() {
+      if (!user) return;
       const messages = await messageService.fetchAll(friend.id);
-      setMessages(messages);
+
+      const asService = new AsymmetricKeyService();
+      const symService = new SymmetricKeyService();
+
+      const privateKey = asService.findPrivateKey(user.id);
+      if (!privateKey) return;
+
+      const descryptedMessages: Message[] = [];
+
+      for (const m of messages) {
+        const isMyMessage = m.fromUserId === user.id;
+        const keys = JSON.parse(m.publicCredentials);
+        const senderEncryptedSessionKey = keys["senderEncryptedSessionKey"];
+        const recipientEncryptedSessionKey =
+          keys["recipientEncryptedSessionKey"];
+        const sessionKey = await asService.decrypt(
+          privateKey,
+          isMyMessage ? senderEncryptedSessionKey : recipientEncryptedSessionKey
+        );
+
+        m.content = await symService.decrypt(sessionKey, m.content);
+      }
+      setMessages(descryptedMessages);
     }
+
     fetch();
 
     chatWebsocket
-      .join(user.id, friend.id, (m) => {
+      .join({ id: user.id, friendId: friend.id }, (m) => {
         pushMessage(m, friend.id);
       })
       .then(() => {
@@ -115,7 +141,10 @@ export const HomePage: React.FC = () => {
       return;
     const { value } = inputRef.current;
     if (value !== "") {
-      await chatWebsocket.send(user.id, selectedUser.id, value);
+      await chatWebsocket.sendMessage(
+        { id: user.id, friendId: selectedUser.id },
+        value
+      );
       pushMessage(value, user.id);
     }
     inputRef.current.value = "";
