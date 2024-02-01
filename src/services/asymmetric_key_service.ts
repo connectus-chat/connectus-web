@@ -6,45 +6,55 @@ export interface Credentials {
 }
 
 export class AsymmetricKeyService {
-
   async generateRSAKeyPair(): Promise<Credentials> {
-    const keyPair: CryptoKeyPair = await crypto.subtle.generateKey({
-      name: 'RSA-OAEP',
-      modulusLength: 2048,
-      publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-      hash: { name: 'SHA-256' }
-    }, true, ['encrypt', 'decrypt']);
+    const keyPair: CryptoKeyPair = await crypto.subtle.generateKey(
+      {
+        name: "RSA-OAEP",
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+        hash: { name: "SHA-256" },
+      },
+      true,
+      ["encrypt", "decrypt"]
+    );
 
-    const exportedPubKey = await crypto.subtle.exportKey('spki', keyPair.publicKey);
-    const exportedPubKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(exportedPubKey)));
-    
-    const exportedPrivKey = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
-  const exportedPrivKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(exportedPrivKey)));
+    const exportedPubKey = await crypto.subtle.exportKey(
+      "spki",
+      keyPair.publicKey
+    );
+    const exportedPubKeyBase64 = btoa(
+      String.fromCharCode(...new Uint8Array(exportedPubKey))
+    );
 
-    
+    const exportedPrivKey = await crypto.subtle.exportKey(
+      "pkcs8",
+      keyPair.privateKey
+    );
+    const exportedPrivKeyBase64 = btoa(
+      String.fromCharCode(...new Uint8Array(exportedPrivKey))
+    );
+
     return {
       publicKey: exportedPubKeyBase64,
-      privateKey: exportedPrivKeyBase64
+      privateKey: exportedPrivKeyBase64,
     };
   }
 
   findPrivateKey(id: string) {
     try {
-      const publicKey = sessionStorage.getItem(`${id}-privatekey`);
-      return publicKey
-    } catch(error) {
-      throw new Error(`Error finding private key: ${error}`)
+      const publicKey = localStorage.getItem(`${id}-privatekey`);
+      return publicKey;
+    } catch (error) {
+      throw new Error(`Error finding private key: ${error}`);
     }
   }
 
-  async findPublicKey(id: string): Promise<string>{
+  async findPublicKey(id: string): Promise<string> {
     try {
-      const { data } = await api.get<{ id: string, publicKey: string }>(
-        `/users/${id}/credentials`
-      );
-      return data.publicKey
-    } catch(error) {
-      throw new Error(`Error finding public key: ${error}`)
+      const { data } = await api.get<string>(`/users/${id}/credentials`);
+      return data;
+    } catch (error) {
+      throw new Error(`Error finding public key: ${error}`);
     }
   }
 
@@ -82,11 +92,10 @@ export class AsymmetricKeyService {
     return importedPrivateKey;
   }
 
-  async encrypt(
-    key: string, message: Uint8Array): Promise<string>{
+  async encrypt(key: string, message: Uint8Array): Promise<string> {
     const binarykey = atob(key);
     const byteNumbers = new Array(binarykey.length);
-    for (let i = 0; i < binarykey.length; i ++) {
+    for (let i = 0; i < binarykey.length; i++) {
       byteNumbers[i] = binarykey.charCodeAt(i);
     }
     const arrayBuffer = new ArrayBuffer(byteNumbers.length);
@@ -96,21 +105,20 @@ export class AsymmetricKeyService {
       unit8Array[i] = byteNumbers[i];
     }
     const keyCrypto = await crypto.subtle.importKey(
-      'spki',
+      "spki",
       unit8Array,
-      { name: 'RSA-PSS', hash: 'SHA-256' },
+      { name: "RSA-PSS", hash: "SHA-256" },
       true,
-      ['verify']
+      ["verify"]
     );
     const encryptedKey = await crypto.subtle.encrypt(
-      { name: 'RSA-OAEP' },
+      { name: "RSA-OAEP" },
       keyCrypto,
       message
     );
 
-    const decoder = new TextDecoder('utf-8');
+    const decoder = new TextDecoder("utf-8");
     const encryptedString = decoder.decode(encryptedKey);
-    // sessionStorage.setItem(`${id}.${frienId}-session-key`, encryptedString);
 
     return encryptedString;
   }
