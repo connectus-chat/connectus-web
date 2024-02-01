@@ -1,5 +1,25 @@
-import * as twf from "twofish";
+import * as twf from 'twofish';
+import { api } from '../api';
 export class SymmetricKeyService {
+
+  generateTwofishKey() {
+    const keySize = 32; // 256-bit key
+    const key = new Uint8Array(keySize);
+    crypto.getRandomValues(key);
+    const decoder = new TextDecoder();
+    return {
+      stringKey: decoder.decode(key), 
+      key: key,
+    };
+  }
+
+  async findSessionKey(id: string, friendId: string){
+    const { data } = await api.get<string>(
+      `/users/${id}/${friendId}/session-key`
+    );
+    return data;
+  }
+
   private str2ab(str: string) {
     const buf = new ArrayBuffer(str.length);
     const bufView = new Uint8Array(buf);
@@ -9,31 +29,22 @@ export class SymmetricKeyService {
     return bufView;
   }
 
-  private hexStringToByteArray(hexString: string) {
-    const byteArray = new Uint8Array(hexString.length / 2);
-    for (let i = 0; i < byteArray.length; i++) {
-      byteArray[i] = parseInt(hexString.slice(i * 2, i * 2 + 2), 16);
-    }
-    return byteArray;
-  }
-
   async encrypt(key: string, message: string) {
     const twofish = twf.twofish();
     const dataArray = this.str2ab(message);
     const keyArray = this.str2ab(key);
     const cipherText = twofish.encrypt(keyArray, dataArray);
-    const encryptedString: string = btoa(JSON.stringify(cipherText));
+    const encryptedString = btoa(String.fromCharCode(...new Uint8Array(cipherText)));
     return encryptedString;
   }
 
   async decrypt(key: string, encryptedMessage: string) {
     const twofish = twf.twofish();
-    const encryptedMessageArray = new Uint8Array(
-      JSON.parse(atob(encryptedMessage))
-    );
+    const encryptedArrayBuffer = new Uint8Array(atob(encryptedMessage).split('').map(char => char.charCodeAt(0)));
+
     const keyArray = this.str2ab(key);
 
-    const data = twofish.decrypt(keyArray, encryptedMessageArray);
+    const data = twofish.decrypt(keyArray, encryptedArrayBuffer);
     const decryptedHex = data
       .map((x: number) => x.toString(16).padStart(2, "0"))
       .join("");
