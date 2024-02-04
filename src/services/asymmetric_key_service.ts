@@ -25,7 +25,7 @@ export class AsymmetricKeyService {
 
     return {
       publicKey: exportedPubKeyBase64,
-      privateKey: exportedPubKeyBase64,
+      privateKey: exportedPrivKeyBase64,
     }
   }
 
