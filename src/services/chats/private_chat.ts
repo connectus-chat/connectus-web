@@ -12,8 +12,8 @@ const asymmetricService = new AsymmetricKeyService();
 const symmetricService = new SymmetricKeyService();
 
 export class PrivateChat extends ChatWebsocketV2<PrivateChatIdentifier> {
-  public senderEncryptedKey: string | null;
-  public recipientEncryptedKey: string | null;
+  public senderEncryptedKey: string | null | undefined;
+  public recipientEncryptedKey: string | null | undefined;
   public friendIsOnline = false;
 
   constructor() {
@@ -44,17 +44,31 @@ export class PrivateChat extends ChatWebsocketV2<PrivateChatIdentifier> {
     if (!this.hasConnection()) return;
     const { id, friendId } = identifier;
 
+    console.log("PAST SESSION KEY: ", this.sessionKey);
+    console.log("PAST KEYS (USER): ", this.senderEncryptedKey);
+    console.log("PAST KEYS (FRIEND): ", this.recipientEncryptedKey);
     // Cria nova chave de sessão se ainda não existe
     if (
       (this.sessionKey === null || this.recipientEncryptedKey === null,
       this.senderEncryptedKey === null)
     ) {
-      console.log("Gerando nova chaves");
+      const senderPublicKey = await asymmetricService.findPublicKey(id);
+      const recipientPublicKey = await asymmetricService.findPublicKey(
+        friendId
+      );
+      console.log("PUBLIC KEY (USER): ", senderPublicKey);
+      console.log("PUBLIC KEY (FRIEND): ", recipientPublicKey);
       const {
         sessionKey,
         recipientEncryptedSessionKey,
         senderEncryptedSessionKey,
-      } = await this.createSessionKey(id, friendId);
+      } = await this.createSessionKey(senderPublicKey, recipientPublicKey);
+      console.log("SESSION KEY: ", sessionKey);
+      console.log("ENCRYPTED SESSION KEY (USER): ", senderEncryptedSessionKey);
+      console.log(
+        "ENCRYPTED SESSION KEY (FRIEND): ",
+        recipientEncryptedSessionKey
+      );
       this.sessionKey = sessionKey;
       this.recipientEncryptedKey = recipientEncryptedSessionKey;
       this.senderEncryptedKey = senderEncryptedSessionKey;
@@ -62,10 +76,12 @@ export class PrivateChat extends ChatWebsocketV2<PrivateChatIdentifier> {
 
     if (this.sessionKey === null) return;
 
+    console.log("MESSAGE: ", message);
     const encryptedMessage = await symmetricService.encrypt(
-      this.sessionKey.stringKey,
+      this.sessionKey,
       message
     );
+    console.log("ENCRYPTED MESSAGE: ", encryptedMessage);
     this.socket?.emit(`send-message.private`, {
       id,
       friendId,
@@ -102,7 +118,7 @@ export class PrivateChat extends ChatWebsocketV2<PrivateChatIdentifier> {
     chat.friendIsOnline = true;
   };
 
-  private async receiveMessage(
+  private receiveMessage = async (
     identifier: PrivateChatIdentifier,
     data: {
       senderId: string;
@@ -113,43 +129,42 @@ export class PrivateChat extends ChatWebsocketV2<PrivateChatIdentifier> {
       };
     },
     onMessage: (message: string) => void
-  ) {
+  ) => {
     const { encryptedSessionKeys, encryptedMessage } = data;
     const { id } = identifier;
+    console.log("RECEIVING MESSAGE: ", encryptedMessage);
+    console.log("RECEIVING KEYS: ", encryptedSessionKeys);
     const privateKey = asymmetricService.findPrivateKey(id);
     if (!privateKey) return;
-
     const newSessionKey = await asymmetricService.decrypt(
       privateKey,
-      encryptedSessionKeys.senderEncryptedSessionKey
+      encryptedSessionKeys.recipientEncryptedSessionKey
     );
-    this.sessionKey = {
-      key: new Uint8Array(),
-      stringKey: newSessionKey,
-    };
+    console.log("RECEIVING ENCRYPTED SESSION KEY: ", newSessionKey);
     const message = await symmetricService.decrypt(
       newSessionKey,
       encryptedMessage
     );
+    console.log("RECEIVING MESSAGE (after decrypt): ", message);
     onMessage(message);
-  }
+  };
 
   private createSessionKey = async (
     senderPublicKey: string,
     recipientPublicKey: string
   ) => {
     const sessionKey = symmetricService.generateTwofishKey();
-    this.sessionKey = sessionKey;
+    this.sessionKey = sessionKey.stringKey;
     const senderEncryptedSessionKey = await asymmetricService.encrypt(
       senderPublicKey,
-      sessionKey.key
+      sessionKey.stringKey
     );
     const recipientEncryptedSessionKey = await asymmetricService.encrypt(
       recipientPublicKey,
-      sessionKey.key
+      sessionKey.stringKey
     );
     return {
-      sessionKey,
+      sessionKey: sessionKey.stringKey,
       senderEncryptedSessionKey,
       recipientEncryptedSessionKey,
     };

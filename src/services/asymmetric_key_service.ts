@@ -6,34 +6,60 @@ export interface Credentials {
 }
 
 const algorithm = {
-  name: 'RSA-OAEP',
+  name: "RSA-OAEP",
   modulusLength: 2048,
   publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-  hash: { name: 'SHA-256' }
-}
+  hash: { name: "SHA-256" },
+};
 
 export class AsymmetricKeyService {
   async generateRSAKeyPair(): Promise<Credentials> {
-    const keyPair: CryptoKeyPair = await crypto.subtle.generateKey(algorithm, true, ['encrypt', 'decrypt']);
+    console.log("GENERATING RSA KEYS");
+    const keyPair: CryptoKeyPair = await crypto.subtle.generateKey(
+      algorithm,
+      true,
+      ["encrypt", "decrypt"]
+    );
 
-    const exportedPubKey = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
-    const exportedPubKeyBase64 = JSON.stringify(exportedPubKey);
-    
-    const exportedPrivKey = await window.crypto.subtle.exportKey("jwk", keyPair.privateKey);
-    const exportedPrivKeyBase64 = JSON.stringify(exportedPrivKey);
+    const exportedPubKey = await crypto.subtle.exportKey(
+      "jwk",
+      keyPair.publicKey
+    );
+    const exportedPubKeyBase64 = this.utf8_to_b64(
+      JSON.stringify(exportedPubKey)
+    );
 
+    const exportedPrivKey = await window.crypto.subtle.exportKey(
+      "jwk",
+      keyPair.privateKey
+    );
+    const exportedPrivKeyBase64 = this.utf8_to_b64(
+      JSON.stringify(exportedPrivKey)
+    );
+
+    console.log("NEW PUBLIC KEY", exportedPubKeyBase64);
+    console.log("NEW PRIVATE KEY", exportedPrivKeyBase64);
     return {
       publicKey: exportedPubKeyBase64,
       privateKey: exportedPrivKeyBase64,
-    }
+    };
+  }
+
+  utf8_to_b64(str: string) {
+    return btoa(encodeURIComponent(str));
+  }
+
+  b64_to_utf8(str: string) {
+    const cleanedValue = str.replaceAll('"', "");
+    return decodeURIComponent(atob(cleanedValue));
   }
 
   findPrivateKey(id: string) {
     try {
-      const publicKey = localStorage.getItem(`${id}-privatekey`);
-      return publicKey
-    } catch(error) {
-      throw new Error(`Error finding private key: ${error}`)
+      const privateKey = localStorage.getItem(`${id}-privatekey`);
+      return privateKey;
+    } catch (error) {
+      throw new Error(`Error finding private key: ${error}`);
     }
   }
 
@@ -46,82 +72,64 @@ export class AsymmetricKeyService {
     }
   }
 
-  private str2ab(str: string) {
-    const buf = new ArrayBuffer(str.length);
-    const bufView = new Uint8Array(buf);
-    for (let i = 0, strLen = str.length; i < strLen; i++) {
-      bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
-  }
-  
-  private async importPrivateKey(pem: string) {
-    const pemHeader = "-----BEGIN PRIVATE KEY-----";
-    const pemFooter = "-----END PRIVATE KEY-----";
-    const pemContents = pem.substring(
-      pemHeader.length,
-      pem.length - pemFooter.length - 1
+  ab2b64(arrayBuffer: ArrayBuffer) {
+    return btoa(
+      String.fromCharCode.apply(null, [...new Uint8Array(arrayBuffer)])
     );
-    // base64 -> binary data
-    const binaryDerString = window.atob(pemContents);
-    // binary string -> ArrayBuffer
-    const binaryDer = this.str2ab(binaryDerString);
+  }
 
-    const importedPrivateKey = await window.crypto.subtle.importKey(
-      "pkcs8",
-      binaryDer,
+  b642ab(base64string: string) {
+    return Uint8Array.from(atob(base64string), (c) => c.charCodeAt(0));
+  }
+
+  private async importPrivateKey(pem: string) {
+    const jsonKey = this.b64_to_utf8(pem);
+    const key = JSON.parse(jsonKey);
+    const importedKey = await window.crypto.subtle.importKey(
+      "jwk",
+      key,
       algorithm,
-      false,
+      true,
       ["decrypt"]
     );
-    return importedPrivateKey;
+    return importedKey;
   }
 
-  async importPublicKey(key: string) {
-    const encrypted = await window.crypto.subtle.importKey(
+  async importPublicKey(pem: string) {
+    const jsonKey = this.b64_to_utf8(pem);
+    const key = JSON.parse(jsonKey);
+    const importedKey = await window.crypto.subtle.importKey(
       "jwk",
-      JSON.parse(key),
-      {
-        name: "RSA-OAEP",
-        hash: "SHA-256",
-      },
+      key,
+      algorithm,
       true,
       ["encrypt"]
     );
-    return encrypted;
-}
+    return importedKey;
+  }
 
-  async encrypt(
-    key: string, message: string): Promise<ArrayBuffer | undefined>{
-    try {  
-      const encoder = new TextEncoder();
-      const encodedMessage = encoder.encode(message);
+  async encrypt(key: string, message: string) {
+    try {
+      const encodedMessage = new TextEncoder().encode(message);
       const pubKey = await this.importPublicKey(key);
       const encryptedData = await window.crypto.subtle.encrypt(
-        {
-            name: "RSA-OAEP"
-        },
+        algorithm,
         pubKey,
         encodedMessage
-    );
-    return encryptedData;
-
-    } catch(error) {
-      console.error('Erro ao encriptar twofish: ', error);
+      );
+      return this.ab2b64(encryptedData);
+    } catch (error) {
+      console.error("Erro ao encriptar twofish: ", error);
     }
   }
 
   async decrypt(privateKey: string, encryptedData: string) {
     try {
       const importedPrivateKey = await this.importPrivateKey(privateKey);
-
-      // base64 -> binary data
-      const binaryDerString = window.atob(encryptedData);
       // binary string -> ArrayBuffer
-      const encodedData = this.str2ab(binaryDerString);
-
+      const encodedData = this.b642ab(encryptedData);
       const decryptedData = await window.crypto.subtle.decrypt(
-        { name: "RSA-OAEP" },
+        algorithm,
         importedPrivateKey,
         encodedData
       );

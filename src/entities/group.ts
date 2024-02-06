@@ -1,3 +1,4 @@
+import { GroupMessage } from "./message";
 import { User } from "./user";
 
 export interface Group {
@@ -6,6 +7,8 @@ export interface Group {
   adminId: string;
   admin: User;
   participants: User[];
+  createdAt: Date;
+  messages?: GroupMessage[];
 }
 
 export type Group2Create = Pick<Group, "title">;

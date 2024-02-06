@@ -5,17 +5,21 @@ import { User } from "../../entities/user";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { GroupProfile } from "../../components/GroupProfile";
 import { Loading } from "../../components/Loading";
-import { Message } from "../../entities/message";
+import { Group } from "../../entities/group";
+import { GroupMessage, Message } from "../../entities/message";
 import { useNotification } from "../../hooks/useNotification";
 import { AsymmetricKeyService } from "../../services/asymmetric_key_service";
 import { PrivateChat } from "../../services/chats/private_chat";
+import { GroupService } from "../../services/group_service";
 import { MessageService } from "../../services/message_service";
 import { SymmetricKeyService } from "../../services/symmetric_key_service";
 import { UserService } from "../../services/user_service";
 import "./styles.css";
 
 const userService = new UserService();
+const groupService = new GroupService();
 const messageService = new MessageService();
 const chatWebsocket = new PrivateChat();
 
@@ -29,12 +33,14 @@ export const HomePage: React.FC = () => {
   // Authenticated User
   const [user, setUser] = useState<User | undefined>();
 
-  // User selected to chat
-  const [selectedUser, setSelectedUser] = useState<User | undefined>();
-  const [messages, setMessages] = useState<Message[] | undefined>();
+  // General chat
   const [currentMessages, setCurrentMessages] = useState<EssentialMessage[]>(
     []
   );
+
+  // User selected to chat
+  const [selectedUser, setSelectedUser] = useState<User | undefined>();
+  const [messages, setMessages] = useState<Message[] | undefined>();
 
   // Current reference of current messages
   const messageRef = useRef<EssentialMessage[]>();
@@ -44,27 +50,48 @@ export const HomePage: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [users2Add, setUsers2Add] = useState<User[] | undefined>();
 
+  // Groups
+  const groupDialogRef = useRef<HTMLDialogElement>(null);
+  const [groups, setGroups] = useState<Group[] | undefined>();
+  const [dialogUsers, setDialogUsers] = useState<User[] | undefined>();
+  const [ids, setParticipantsIds] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState("");
+
+  // Message of groups
+  const [selectedGroup, setSelectedGroup] = useState<Group | undefined>();
+  const [messageGroups, setMessageGroups] = useState<
+    GroupMessage[] | undefined
+  >();
+
   useEffect(() => {
     async function fetch() {
       const foundUser = await userService.getAuthenticatedUser();
+      if (!foundUser) return;
+      const groups = await groupService.fetchAllByUserId(foundUser.id);
       setUser(foundUser);
+      setGroups(groups);
     }
 
     fetch();
   }, []);
 
+  async function filterUsers(query: string) {
+    let users = await userService.fetchAll();
+    users = users.filter(
+      (u) =>
+        (u.name.toLowerCase().includes(query.toLowerCase()) ||
+          u.username.toLowerCase().includes(query.toLowerCase())) &&
+        u.id !== user?.id
+    );
+    return users;
+  }
+
   async function handleSearch(event: ChangeEvent<HTMLInputElement>) {
     const { value: searchFor } = event.currentTarget;
     if (searchFor === "") return setIsSearching(false);
     setIsSearching(true);
-    let users = await userService.fetchAll();
-    users = users.filter(
-      (u) =>
-        (u.name.toLowerCase().includes(searchFor.toLowerCase()) ||
-          u.username.toLowerCase().includes(searchFor.toLowerCase())) &&
-        u.id !== user?.id &&
-        !user?.friends.map((f) => f.id).includes(u.id)
-    );
+    let users = await filterUsers(searchFor);
+    users = users.filter((u) => !user?.friends.map((f) => f.id).includes(u.id));
     setUsers2Add(users);
   }
 
@@ -88,22 +115,26 @@ export const HomePage: React.FC = () => {
     setIsSearching(false);
   }
 
+  // ======================= PRIVATE CHAT =============================
   async function handleOpenChat(friend: User) {
     if (!user) return;
 
     async function fetch() {
       if (!user) return;
-      const messages = await messageService.fetchAll(friend.id);
-
+      const newMessages = await messageService.fetchAll(friend.id);
       const asService = new AsymmetricKeyService();
       const symService = new SymmetricKeyService();
 
       const privateKey = asService.findPrivateKey(user.id);
       if (!privateKey) return;
-
-      const descryptedMessages: Message[] = [];
-
-      for (const m of messages) {
+      const descryptedMessages: Message[] = [
+        ...newMessages.map((m) => {
+          return { ...m };
+        }),
+      ];
+      console.log("SAVED MESSAGES (ENCRYPTED)");
+      console.log(newMessages);
+      for (const m of descryptedMessages) {
         const isMyMessage = m.fromUserId === user.id;
         const keys = JSON.parse(m.publicCredentials);
         const senderEncryptedSessionKey = keys["senderEncryptedSessionKey"];
@@ -116,6 +147,8 @@ export const HomePage: React.FC = () => {
 
         m.content = await symService.decrypt(sessionKey, m.content);
       }
+      console.log("SAVED MESSAGES (DESCRYPTED)");
+      console.log(descryptedMessages);
       setMessages(descryptedMessages);
     }
 
@@ -161,6 +194,85 @@ export const HomePage: React.FC = () => {
     ]);
   }
 
+  // =================== GROUP CHAT ============================
+
+  function handleCreateGroupDialog() {
+    groupDialogRef.current?.showModal();
+  }
+
+  function handleCloseGroupDialog() {
+    groupDialogRef.current?.close();
+  }
+
+  function handleChangeGroupName(event: ChangeEvent<HTMLInputElement>) {
+    const { value } = event.target;
+    if (value === "") {
+      pushNotification({
+        message: "Preencha o título do grupo",
+        type: "error",
+      });
+      return;
+    }
+    setGroupName(value);
+  }
+
+  async function handleFilterUsers(event: ChangeEvent<HTMLInputElement>) {
+    const { value } = event.target;
+    if (value === "") {
+      setDialogUsers(undefined);
+      return;
+    }
+    const newUsers = await filterUsers(value);
+    setDialogUsers(newUsers);
+  }
+
+  function handleAddParticipant(id: string) {
+    setParticipantsIds([...ids, id]);
+  }
+
+  function handleRemoveParticipant(id: string) {
+    setParticipantsIds([...ids.filter((i) => i !== id)]);
+  }
+
+  async function handleCreateGroup() {
+    if (!user) return;
+    await groupService.createAndAdd(
+      {
+        title: groupName,
+      },
+      ids,
+      user.id
+    );
+    window.location.reload();
+  }
+
+  function renderDialogUser(dialogUser: User, index: number) {
+    return (
+      <li className="user" key={`dialoguser-${index}`}>
+        <label className="name">
+          {dialogUser.name} - @{dialogUser.username}
+        </label>
+        {!ids.includes(dialogUser.id) ? (
+          <button
+            className="bt secondary"
+            onClick={() => handleAddParticipant(dialogUser.id)}
+          >
+            ADICIONAR
+          </button>
+        ) : (
+          <button
+            className="bt primary"
+            onClick={() => handleRemoveParticipant(dialogUser.id)}
+          >
+            REMOVER
+          </button>
+        )}
+      </li>
+    );
+  }
+
+  // ===========================================================
+
   function renderFriend(friend: User, index: number) {
     return (
       <li key={index} className="chat" onClick={() => handleOpenChat(friend)}>
@@ -187,6 +299,14 @@ export const HomePage: React.FC = () => {
     );
   }
 
+  function renderGroup(group: Group, index: number) {
+    return (
+      <li key={`group-${index}`} className="chat group">
+        <GroupProfile group={group} selected={group.id === selectedGroup?.id} />
+      </li>
+    );
+  }
+
   return (
     <div className="home-page">
       {user ? (
@@ -202,6 +322,12 @@ export const HomePage: React.FC = () => {
                 placeholder="Pesquise por outros usuários..."
                 onChange={handleSearch}
               />
+              <button
+                className="bt secondary"
+                onClick={() => handleCreateGroupDialog()}
+              >
+                CRIAR GRUPO
+              </button>
               <button className="bt secondary exit" onClick={handleLogout}>
                 <ExitIcon size={28} />
                 SAIR
@@ -217,7 +343,10 @@ export const HomePage: React.FC = () => {
                 </label>
               </li>
               {!isSearching ? (
-                user.friends.map(renderFriend)
+                <>
+                  {user.friends.map(renderFriend)}
+                  {groups?.map(renderGroup)}
+                </>
               ) : users2Add !== undefined ? (
                 users2Add.map(renderUser2Add)
               ) : (
@@ -262,6 +391,41 @@ export const HomePage: React.FC = () => {
       ) : (
         <Loading />
       )}
+
+      <dialog className="add-group" ref={groupDialogRef} open={false}>
+        <div className="container">
+          <button className="bt primary" onClick={handleCloseGroupDialog}>
+            FECHAR
+          </button>
+          <input
+            type="text"
+            className="ipt"
+            placeholder="Digite o título do grupo"
+            onChange={handleChangeGroupName}
+          />
+          <input
+            type="text"
+            className="ipt"
+            placeholder="Pesquisar usuário"
+            onChange={handleFilterUsers}
+          />
+          {dialogUsers ? (
+            dialogUsers.length > 0 ? (
+              <>
+                <label>Usuários encontrados:</label>
+                <ul className="users">{dialogUsers.map(renderDialogUser)}</ul>
+              </>
+            ) : (
+              <label>Nenhum usuário encontrado.</label>
+            )
+          ) : (
+            <label>Pesquise por algum usuário</label>
+          )}
+          <button className="bt primary" onClick={handleCreateGroup}>
+            Salvar
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 };
