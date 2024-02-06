@@ -88,6 +88,7 @@ export const HomePage: React.FC = () => {
     setIsSearching(false);
   }
 
+  // ======================= PRIVATE CHAT =============================
   async function handleOpenChat(friend: User) {
     if (!user) return;
 
@@ -97,12 +98,16 @@ export const HomePage: React.FC = () => {
       const asService = new AsymmetricKeyService();
       const symService = new SymmetricKeyService();
 
-      console.log(user.id);
       const privateKey = asService.findPrivateKey(user.id);
       if (!privateKey) return;
-      const descryptedMessages: Message[] = [];
-
-      for (const m of newMessages) {
+      const descryptedMessages: Message[] = [
+        ...newMessages.map((m) => {
+          return { ...m };
+        }),
+      ];
+      console.log("SAVED MESSAGES (ENCRYPTED)");
+      console.log(newMessages);
+      for (const m of descryptedMessages) {
         const isMyMessage = m.fromUserId === user.id;
         const keys = JSON.parse(m.publicCredentials);
         const senderEncryptedSessionKey = keys["senderEncryptedSessionKey"];
@@ -115,6 +120,7 @@ export const HomePage: React.FC = () => {
 
         m.content = await symService.decrypt(sessionKey, m.content);
       }
+      console.log("SAVED MESSAGES (DESCRYPTED)");
       console.log(descryptedMessages);
       setMessages(descryptedMessages);
     }
@@ -160,6 +166,8 @@ export const HomePage: React.FC = () => {
       },
     ]);
   }
+
+  // ===========================================================
 
   function renderFriend(friend: User, index: number) {
     return (

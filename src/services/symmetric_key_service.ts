@@ -5,8 +5,9 @@ export class SymmetricKeyService {
     const keySize = 32; // 256-bit key
     const key = new Uint8Array(keySize);
     crypto.getRandomValues(key);
+    const decoder = new TextDecoder();
     return {
-      stringKey: btoa(String.fromCharCode.apply(null, Array.from(key))),
+      stringKey: decoder.decode(key),
       key: key,
     };
   }

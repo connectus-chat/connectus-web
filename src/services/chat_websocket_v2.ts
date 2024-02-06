@@ -2,7 +2,7 @@ import { Socket, io } from "socket.io-client";
 import { API_BASE_URL } from "../constants";
 
 export abstract class ChatWebsocketV2<ChatIdentifier> {
-  protected sessionKey: { stringKey: string; key: Uint8Array } | null;
+  protected sessionKey: string | null;
   protected socket: Socket | null;
 
   constructor() {
