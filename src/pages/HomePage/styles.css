@@ -64,6 +64,10 @@
   background-color: #00920f76;
 }
 
+.home-page .main .profile-container .chats .chat:hover.group {
+  background-color: #92000076;
+}
+
 .home-page .main .chat-container {
   flex: 3;
   height: 100vh;
@@ -138,4 +142,48 @@
     background-position-x: 0px;
     background-position-y: 0px;
   }
+}
+
+.home-page dialog.add-group {
+  width: 40%;
+  margin: auto;
+}
+
+.home-page dialog.add-group .container {
+  border: 1px solid #000;
+  border-radius: 2px;
+
+  align-items: center;
+  flex-direction: column;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 18px;
+  padding: 16px;
+}
+
+.home-page dialog.add-group .container > .bt:first-child {
+  width: 100px;
+  margin-left: auto;
+}
+
+.home-page dialog.add-group .container > .users {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-page dialog.add-group .container > .users .user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-page dialog.add-group .container > .users .user .name {
+  flex: 2;
+}
+
+.home-page dialog.add-group .container > .users .user .bt {
+  flex: 1;
 }

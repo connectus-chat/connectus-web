@@ -1,0 +1,25 @@
+.group-profile {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  gap: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.group-profile.selected,
+.group-profile.hover {
+  background-color: rgba(76, 1, 1, 0.434);
+}
+
+.group-profile .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-profile .info .name {
+  font-weight: bold;
+  font-size: 12pt;
+}

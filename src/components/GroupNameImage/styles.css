@@ -1,0 +1,17 @@
+.group-container {
+  --size-username-img: 50px;
+  width: var(--size-username-img);
+  height: var(--size-username-img);
+  background-color: red;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid white;
+}
+
+.group-container .group-label {
+  font-weight: bolder;
+  font-size: 16pt;
+  color: white;
+}
