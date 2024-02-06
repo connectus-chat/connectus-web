@@ -11,6 +11,7 @@ import { Group } from "../../entities/group";
 import { GroupMessage, Message } from "../../entities/message";
 import { useNotification } from "../../hooks/useNotification";
 import { AsymmetricKeyService } from "../../services/asymmetric_key_service";
+import { GroupChat, GroupSessionKeys } from "../../services/chats/group_chat";
 import { PrivateChat } from "../../services/chats/private_chat";
 import { GroupService } from "../../services/group_service";
 import { MessageService } from "../../services/message_service";
@@ -22,6 +23,7 @@ const userService = new UserService();
 const groupService = new GroupService();
 const messageService = new MessageService();
 const chatWebsocket = new PrivateChat();
+const chatGroupWebsocket = new GroupChat();
 
 type EssentialMessage = Pick<Message, "content" | "fromUserId" | "time">;
 
@@ -119,6 +121,8 @@ export const HomePage: React.FC = () => {
   async function handleOpenChat(friend: User) {
     if (!user) return;
 
+    console.log("SELECTED USER: ", friend);
+
     async function fetch() {
       if (!user) return;
       const newMessages = await messageService.fetchAll(friend.id);
@@ -160,6 +164,7 @@ export const HomePage: React.FC = () => {
       })
       .then(() => {
         setSelectedUser(friend);
+        setSelectedGroup(undefined);
       });
   }
 
@@ -195,6 +200,102 @@ export const HomePage: React.FC = () => {
   }
 
   // =================== GROUP CHAT ============================
+
+  async function handleOpenChatGroup(group: Group) {
+    if (!user) return;
+
+    console.log("SELECTED GROUP: ", group);
+
+    async function fetch() {
+      if (!user) return;
+      const newMessages = await messageService.fetchAllMessageGroups(group.id);
+      const asService = new AsymmetricKeyService();
+      const symService = new SymmetricKeyService();
+
+      const privateKey = asService.findPrivateKey(user.id);
+      if (!privateKey) return;
+      const descryptedMessages: GroupMessage[] = [
+        ...newMessages.map((m) => {
+          return { ...m };
+        }),
+      ];
+      console.log("SAVED MESSAGES (ENCRYPTED)");
+      console.log(newMessages);
+      for (const m of descryptedMessages) {
+        const isMyMessage = m.fromUserId === user.id;
+        const keys: {
+          senderEncryptedSessionKey: string;
+          recipients: GroupSessionKeys[];
+        } = JSON.parse(m.publicCredentials);
+
+        const senderEncryptedSessionKey = keys["senderEncryptedSessionKey"];
+        const recipientEncryptedSessionKey = keys["recipients"].find(
+          (r) => r.id === user.id
+        )?.encryptedSessionKey;
+
+        if (!isMyMessage && recipientEncryptedSessionKey === undefined) return;
+        const encryptedSessionKey = isMyMessage
+          ? senderEncryptedSessionKey
+          : recipientEncryptedSessionKey || "";
+        const sessionKey = await asService.decrypt(
+          privateKey,
+          encryptedSessionKey
+        );
+        m.content = await symService.decrypt(sessionKey, m.content);
+      }
+      console.log("SAVED MESSAGES (DESCRYPTED)");
+      console.log(descryptedMessages);
+      setMessageGroups(descryptedMessages);
+    }
+
+    fetch();
+
+    chatGroupWebsocket
+      .join(
+        {
+          id: user.id,
+          groupId: group.id,
+          participantsIds: [
+            ...group.participants.map((p) => p.id),
+            group.adminId,
+          ],
+        },
+        (m) => {
+          pushMessage(m, group.id);
+        }
+      )
+      .then(() => {
+        setSelectedGroup(group);
+        setSelectedUser(undefined);
+      });
+  }
+
+  async function handleSendGroup() {
+    if (
+      !inputRef ||
+      !inputRef.current ||
+      !user ||
+      !selectedGroup ||
+      messageGroups === undefined
+    )
+      return;
+    const { value } = inputRef.current;
+    if (value !== "") {
+      await chatGroupWebsocket.sendMessage(
+        {
+          id: user.id,
+          groupId: selectedGroup.id,
+          participantsIds: [
+            ...selectedGroup.participants.map((p) => p.id),
+            selectedGroup.adminId,
+          ],
+        },
+        value
+      );
+      pushMessage(value, user.id);
+    }
+    inputRef.current.value = "";
+  }
 
   function handleCreateGroupDialog() {
     groupDialogRef.current?.showModal();
@@ -290,18 +391,33 @@ export const HomePage: React.FC = () => {
   }
 
   function renderMessage(message: EssentialMessage, index: number) {
+    if (!user) return;
+    const isMine = message.fromUserId === user.id;
+    const isGroupChat = selectedGroup !== undefined;
+    const name = isMine
+      ? user.name
+      : !isGroupChat
+      ? selectedUser?.name
+      : selectedGroup.participants.find((p) => p.id === message.fromUserId)
+          ?.name;
     return (
       <MessageCard
         key={index}
         message={message}
-        isMine={message.fromUserId === user?.id}
+        isMine={isMine}
+        name={name || "Participante"}
+        showName={isGroupChat}
       />
     );
   }
 
   function renderGroup(group: Group, index: number) {
     return (
-      <li key={`group-${index}`} className="chat group">
+      <li
+        key={`group-${index}`}
+        className="chat group"
+        onClick={() => handleOpenChatGroup(group)}
+      >
         <GroupProfile group={group} selected={group.id === selectedGroup?.id} />
       </li>
     );
@@ -377,6 +493,37 @@ export const HomePage: React.FC = () => {
                         }}
                       />
                       <button className="send" onClick={handleSend}>
+                        <SendIcon size={28} />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <Loading />
+                )}
+              </>
+            )}
+            {selectedGroup && (
+              <>
+                {messageGroups ? (
+                  <>
+                    <header className="chat-user">
+                      <GroupProfile group={selectedGroup} />
+                    </header>
+                    <ul className="messages">
+                      {messageGroups?.map(renderMessage)}
+                      {currentMessages?.map(renderMessage)}
+                    </ul>
+                    <div className="actions">
+                      <input
+                        type="text"
+                        className="ipt"
+                        placeholder="Digitar mensagem"
+                        ref={inputRef}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") handleSendGroup();
+                        }}
+                      />
+                      <button className="send" onClick={handleSendGroup}>
                         <SendIcon size={28} />
                       </button>
                     </div>
