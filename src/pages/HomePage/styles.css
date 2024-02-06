@@ -75,6 +75,7 @@
   background-image: url("favicong.svg");
   background-repeat: repeat;
   background-size: 80px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -89,12 +90,10 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: start;
-  overflow-y: scroll;
   gap: 8px;
-  height: 1000px;
   padding: 32px;
   justify-content: flex-end;
+  margin-top: auto;
 }
 
 .home-page .main .chat-container .actions {
