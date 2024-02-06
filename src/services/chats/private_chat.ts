@@ -50,11 +50,15 @@ export class PrivateChat extends ChatWebsocketV2<PrivateChatIdentifier> {
       this.senderEncryptedKey === null)
     ) {
       console.log("Gerando nova chaves");
+      const senderPublicKey = await asymmetricService.findPublicKey(id);
+      const recipientPublicKey = await asymmetricService.findPublicKey(
+        friendId
+      );
       const {
         sessionKey,
         recipientEncryptedSessionKey,
         senderEncryptedSessionKey,
-      } = await this.createSessionKey(id, friendId);
+      } = await this.createSessionKey(senderPublicKey, recipientPublicKey);
       this.sessionKey = sessionKey;
       this.recipientEncryptedKey = recipientEncryptedSessionKey;
       this.senderEncryptedKey = senderEncryptedSessionKey;

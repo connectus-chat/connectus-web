@@ -93,17 +93,16 @@ export const HomePage: React.FC = () => {
 
     async function fetch() {
       if (!user) return;
-      const messages = await messageService.fetchAll(friend.id);
-
+      const newMessages = await messageService.fetchAll(friend.id);
       const asService = new AsymmetricKeyService();
       const symService = new SymmetricKeyService();
 
+      console.log(user.id);
       const privateKey = asService.findPrivateKey(user.id);
       if (!privateKey) return;
-
       const descryptedMessages: Message[] = [];
 
-      for (const m of messages) {
+      for (const m of newMessages) {
         const isMyMessage = m.fromUserId === user.id;
         const keys = JSON.parse(m.publicCredentials);
         const senderEncryptedSessionKey = keys["senderEncryptedSessionKey"];
@@ -116,6 +115,7 @@ export const HomePage: React.FC = () => {
 
         m.content = await symService.decrypt(sessionKey, m.content);
       }
+      console.log(descryptedMessages);
       setMessages(descryptedMessages);
     }
 

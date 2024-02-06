@@ -1,19 +1,17 @@
-import * as twf from 'twofish';
-import { api } from '../api';
+import * as twf from "twofish";
+import { api } from "../api";
 export class SymmetricKeyService {
-
   generateTwofishKey() {
     const keySize = 32; // 256-bit key
     const key = new Uint8Array(keySize);
     crypto.getRandomValues(key);
-    const decoder = new TextDecoder();
     return {
-      stringKey: decoder.decode(key), 
+      stringKey: btoa(String.fromCharCode.apply(null, Array.from(key))),
       key: key,
     };
   }
 
-  async findSessionKey(id: string, friendId: string){
+  async findSessionKey(id: string, friendId: string) {
     const { data } = await api.get<string>(
       `/users/${id}/${friendId}/session-key`
     );
@@ -34,13 +32,19 @@ export class SymmetricKeyService {
     const dataArray = this.str2ab(message);
     const keyArray = this.str2ab(key);
     const cipherText = twofish.encrypt(keyArray, dataArray);
-    const encryptedString = btoa(String.fromCharCode(...new Uint8Array(cipherText)));
+    const encryptedString = btoa(
+      String.fromCharCode(...new Uint8Array(cipherText))
+    );
     return encryptedString;
   }
 
   async decrypt(key: string, encryptedMessage: string) {
     const twofish = twf.twofish();
-    const encryptedArrayBuffer = new Uint8Array(atob(encryptedMessage).split('').map(char => char.charCodeAt(0)));
+    const encryptedArrayBuffer = new Uint8Array(
+      atob(encryptedMessage)
+        .split("")
+        .map((char) => char.charCodeAt(0))
+    );
 
     const keyArray = this.str2ab(key);
 
