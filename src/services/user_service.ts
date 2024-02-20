@@ -33,6 +33,16 @@ export class UserService {
     return data;
   }
 
+  async fetchFriends() {
+    try {
+        const id = sessionStorage.getItem(LOCAL_AUTH);
+        const { data } = await api.get<User[]>(`${PATH}/${id}/friends`);
+        return data;
+    } catch (error) {
+      return [];
+    }
+  }
+
   async findById(id: string) {
     try {
       const { data } = await api.get<User>(`${PATH}/${id}`);
