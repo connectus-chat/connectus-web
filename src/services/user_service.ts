@@ -33,6 +33,11 @@ export class UserService {
     return data;
   }
 
+  async fetchAllFriends(id: string) {
+    const { data } = await api.get<User[]>(`${PATH}/${id}/friends`);
+    return data;
+  }
+
   async findById(id: string) {
     try {
       const { data } = await api.get<User>(`${PATH}/${id}`);

@@ -323,8 +323,14 @@ export const HomePage: React.FC = () => {
       setDialogUsers(undefined);
       return;
     }
-    const newUsers = await filterUsers(value);
-    setDialogUsers(newUsers);
+    if (!user) return;
+    const newUsers = await userService.fetchAllFriends(user.id);
+    const filteredUsers = newUsers.filter(
+      (u) =>
+        (u.name.includes(value) || u.username.includes(value)) &&
+        u.id !== user.id
+    );
+    setDialogUsers(filteredUsers);
   }
 
   function handleAddParticipant(id: string) {
