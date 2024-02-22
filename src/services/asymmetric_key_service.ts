@@ -1,4 +1,5 @@
 import { api } from "../api";
+import { getAuth } from "./user_service";
 
 export interface Credentials {
   publicKey: string;
@@ -65,7 +66,9 @@ export class AsymmetricKeyService {
 
   async findPublicKey(id: string): Promise<string> {
     try {
-      const { data } = await api.get<string>(`/users/${id}/credentials`);
+      const { data } = await api.get<string>(
+        `/users/${id}/credentials?auth=${getAuth()}`
+      );
       return data;
     } catch (error) {
       throw new Error(`Error finding public key: ${error}`);
