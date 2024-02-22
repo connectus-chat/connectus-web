@@ -28,6 +28,15 @@
   gap: 16px;
 }
 
+.home-page .main .profile-container.small {
+  flex: none;
+  width: 100px;
+}
+
+.home-page .main .profile-container.small .my-friends {
+  display: none;
+}
+
 .home-page .main .profile-container.small .actions {
   display: none;
 }

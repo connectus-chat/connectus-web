@@ -443,7 +443,7 @@ export const HomePage: React.FC = () => {
     <div className="home-page">
       {user ? (
         <main className="main">
-          <div className={`profile-container ${sideBarOpen ? "small" : ""}`}>
+          <div className={`profile-container ${sideBarOpen ? "" : "small"}`}>
             <button onClick={toggleSideBarVisibility} className="bt">
               {sideBarOpen ? "FECHAR" : "ABRIR"}
             </button>
@@ -468,7 +468,7 @@ export const HomePage: React.FC = () => {
                 SAIR
               </button>
             </div>
-            <label>
+            <label className="my-friends">
               {!isSearching ? "Meus amigos" : `Usuários encontrados`}
             </label>
             <ul className="chats">
