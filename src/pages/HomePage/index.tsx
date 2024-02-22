@@ -165,6 +165,8 @@ export const HomePage: React.FC = () => {
       .then(() => {
         setSelectedUser(friend);
         setSelectedGroup(undefined);
+        setCurrentMessages([]);
+        setMessages(undefined);
       });
   }
 
@@ -267,6 +269,8 @@ export const HomePage: React.FC = () => {
       .then(() => {
         setSelectedGroup(group);
         setSelectedUser(undefined);
+        setCurrentMessages([]);
+        setMessages(undefined);
       });
   }
 

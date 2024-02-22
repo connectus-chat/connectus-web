@@ -4,6 +4,11 @@ import { AsymmetricKeyService } from "./asymmetric_key_service";
 
 const PATH = "/users";
 export const LOCAL_AUTH = "authid";
+
+export function getAuth() {
+  return sessionStorage.getItem(LOCAL_AUTH);
+}
+
 export class UserService {
   private asymmetricService = new AsymmetricKeyService();
   logout() {
@@ -29,18 +34,20 @@ export class UserService {
   }
 
   async fetchAll() {
-    const { data } = await api.get<User[]>(PATH);
+    const { data } = await api.get<User[]>(`${PATH}?auth=${getAuth()}`);
     return data;
   }
 
   async fetchAllFriends(id: string) {
-    const { data } = await api.get<User[]>(`${PATH}/${id}/friends`);
+    const { data } = await api.get<User[]>(
+      `${PATH}/${id}/friends?auth=${getAuth()}`
+    );
     return data;
   }
 
   async findById(id: string) {
     try {
-      const { data } = await api.get<User>(`${PATH}/${id}`);
+      const { data } = await api.get<User>(`${PATH}/${id}?auth=${getAuth()}`);
       return data;
     } catch (error) {
       return undefined;
@@ -51,7 +58,7 @@ export class UserService {
     try {
       const id = sessionStorage.getItem(LOCAL_AUTH);
       if (!id) throw new Error("Usuário sem as credenciais necessárias");
-      const { data } = await api.get<User>(`${PATH}/${id}`);
+      const { data } = await api.get<User>(`${PATH}/${id}?auth=${getAuth()}`);
       return data;
     } catch (error) {
       return undefined;
@@ -63,7 +70,7 @@ export class UserService {
       const { data } = await api.post<User>(PATH, newUser);
 
       const userKeyPair = await this.asymmetricService.generateRSAKeyPair();
-      await api.patch<User>(`${PATH}/${data.id}/credentials`, {
+      await api.patch<User>(`${PATH}/${data.id}/credentials?auth=${data.id}`, {
         id: data.id,
         publicKey: JSON.stringify(userKeyPair.publicKey),
       });
@@ -79,9 +86,9 @@ export class UserService {
       const id = sessionStorage.getItem(LOCAL_AUTH);
       if (!id) throw new Error("Usuário sem as credenciais necessárias");
       const { data } = await api.post<User>(
-        `/users/${id}/follow/${user2Follow}`
+        `/users/${id}/follow/${user2Follow}?auth=${getAuth()}`
       );
-      await api.post(`/users/${user2Follow}/follow/${id}`);
+      await api.post(`/users/${user2Follow}/follow/${id}?auth=${getAuth()}`);
       return data;
     } catch (error) {
       return undefined;
