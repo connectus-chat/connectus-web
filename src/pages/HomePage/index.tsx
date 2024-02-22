@@ -79,7 +79,7 @@ export const HomePage: React.FC = () => {
   }, []);
 
   async function filterUsers(query: string) {
-    let users = await userService.fetchAll();
+    let users = await userService.fetchFriends();
     users = users.filter(
       (u) =>
         (u.name.toLowerCase().includes(query.toLowerCase()) ||
