@@ -8,6 +8,10 @@
   pointer-events: all;
 }
 
+.small .user-profile {
+  justify-content: center;
+}
+
 .user-profile.selected {
   background-color: rgba(1, 76, 8, 0.434);
 }

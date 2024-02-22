@@ -8,6 +8,10 @@
   pointer-events: all;
 }
 
+.small .group-profile {
+  justify-content: center;
+}
+
 .group-profile.selected,
 .group-profile.hover {
   background-color: rgba(76, 1, 1, 0.434);
