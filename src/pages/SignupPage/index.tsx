@@ -16,8 +16,10 @@ export const SignupPage: React.FC = () => {
   const { pushNotification } = useNotification();
 
   async function onSubmit(formEvent: FormEvent<HTMLFormElement>) {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     formEvent.preventDefault();
     const data = getFormData(formEvent.currentTarget);
+    
     const { name, username, email, date, password, confirmPassword } = data;
 
     if (password !== confirmPassword) {
@@ -27,7 +29,21 @@ export const SignupPage: React.FC = () => {
       });
       return;
     }
+    if (password.length < 8) {
+      pushNotification({
+        message: "A senha deve ter pelo menos 8 caracteres.",
+        type: "error",
+      });
+      return;
+    }
 
+    if(!regex.test(password)) {
+      pushNotification({
+        message: "A senha não atende ao padrões de segurança.",
+        type: 'error'
+      });
+      return;
+    }
     const age = new Date().getFullYear() - new Date(date).getFullYear();
 
     const newUser: User2Create = {
