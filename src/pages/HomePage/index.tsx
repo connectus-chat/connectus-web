@@ -417,7 +417,7 @@ export const HomePage: React.FC = () => {
         key={index}
         message={message}
         isMine={isMine}
-        name={name || "Participante"}
+        name={name || `${name || ""} ADM`}
         showName={isGroupChat}
       />
     );
