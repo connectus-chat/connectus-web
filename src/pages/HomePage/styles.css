@@ -28,6 +28,10 @@
   gap: 16px;
 }
 
+.home-page .main .profile-container.small .actions {
+  display: none;
+}
+
 .home-page .main .profile-container .actions {
   display: flex;
   flex-direction: row;

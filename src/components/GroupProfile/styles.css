@@ -23,3 +23,7 @@
   font-weight: bold;
   font-size: 12pt;
 }
+
+.small .group-profile .name {
+  display: none;
+}

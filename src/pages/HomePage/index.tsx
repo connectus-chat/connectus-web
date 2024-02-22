@@ -31,6 +31,7 @@ export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { pushNotification } = useNotification();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [sideBarOpen, setSideBarOpen] = useState(true);
 
   // Authenticated User
   const [user, setUser] = useState<User | undefined>();
@@ -154,6 +155,8 @@ export const HomePage: React.FC = () => {
       console.log("SAVED MESSAGES (DESCRYPTED)");
       console.log(descryptedMessages);
       setMessages(descryptedMessages);
+      setCurrentMessages([]);
+      setMessageGroups(undefined);
     }
 
     fetch();
@@ -165,8 +168,6 @@ export const HomePage: React.FC = () => {
       .then(() => {
         setSelectedUser(friend);
         setSelectedGroup(undefined);
-        setCurrentMessages([]);
-        setMessages(undefined);
       });
   }
 
@@ -247,6 +248,9 @@ export const HomePage: React.FC = () => {
       }
       console.log("SAVED MESSAGES (DESCRYPTED)");
       console.log(descryptedMessages);
+
+      setCurrentMessages([]);
+      setMessages(undefined);
       setMessageGroups(descryptedMessages);
     }
 
@@ -269,8 +273,6 @@ export const HomePage: React.FC = () => {
       .then(() => {
         setSelectedGroup(group);
         setSelectedUser(undefined);
-        setCurrentMessages([]);
-        setMessages(undefined);
       });
   }
 
@@ -433,11 +435,18 @@ export const HomePage: React.FC = () => {
     );
   }
 
+  function toggleSideBarVisibility() {
+    setSideBarOpen(!sideBarOpen);
+  }
+
   return (
     <div className="home-page">
       {user ? (
         <main className="main">
-          <div className="profile-container">
+          <div className={`profile-container ${sideBarOpen ? "small" : ""}`}>
+            <button onClick={toggleSideBarVisibility} className="bt">
+              {sideBarOpen ? "FECHAR" : "ABRIR"}
+            </button>
             <div className="profile">
               <UserProfile user={user} />
             </div>
