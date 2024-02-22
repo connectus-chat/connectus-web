@@ -70,13 +70,10 @@ export class UserService {
       const { data } = await api.post<User>(PATH, newUser);
 
       const userKeyPair = await this.asymmetricService.generateRSAKeyPair();
-      await api.patch<User>(
-        `${PATH}/${data.id}/credentials?auth=${getAuth()}`,
-        {
-          id: data.id,
-          publicKey: JSON.stringify(userKeyPair.publicKey),
-        }
-      );
+      await api.patch<User>(`${PATH}/${data.id}/credentials?auth=${data.id}`, {
+        id: data.id,
+        publicKey: JSON.stringify(userKeyPair.publicKey),
+      });
       localStorage.setItem(`${data.id}-privatekey`, userKeyPair.privateKey);
       return data;
     } catch (error) {
